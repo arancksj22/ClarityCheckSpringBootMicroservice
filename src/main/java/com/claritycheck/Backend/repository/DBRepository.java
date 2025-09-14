@@ -5,5 +5,5 @@ import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 @Repository
-public interface DBRepository extends JpaRepository<AgentHistory, Id>{
+public interface DBRepository extends JpaRepository<AgentHistory, id>{
 }
