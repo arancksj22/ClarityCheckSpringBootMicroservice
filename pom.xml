@@ -28,12 +28,41 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<aws.sdk.version>2.25.76</aws.sdk.version>
 	</properties>
 
 	<dependencies>
+		<!-- Web -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<!-- Validation -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+
+		<!-- JPA to Postgres (Supabase) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.7.2</version>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- Security: OAuth2 Resource Server (JWT) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
 		</dependency>
 
 		<dependency>
@@ -52,16 +81,6 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<dependency>
-			<groupId>org.postgresql</groupId>
-			<artifactId>postgresql</artifactId>
-			<version>42.7.2</version>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-		</dependency>
-
 	</dependencies>
 
 	<build>
@@ -92,5 +111,47 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>dev-no-aws</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-compiler-plugin</artifactId>
+						<configuration>
+							<excludes>
+								<exclude>**/config/S3Config.java</exclude>
+								<exclude>**/service/DocumentService.java</exclude>
+								<exclude>**/controller/DocumentController.java</exclude>
+								<exclude>**/repository/UserDocumentRepository.java</exclude>
+								<exclude>**/model/UserDocument.java</exclude>
+							</excludes>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<profile>
+			<id>aws</id>
+			<dependencies>
+				<dependency>
+					<groupId>software.amazon.awssdk</groupId>
+					<artifactId>s3</artifactId>
+					<version>${aws.sdk.version}</version>
+				</dependency>
+				<dependency>
+					<groupId>software.amazon.awssdk</groupId>
+					<artifactId>sts</artifactId>
+					<version>${aws.sdk.version}</version>
+				</dependency>
+			</dependencies>
+		</profile>
+	</profiles>
 
 </project>
