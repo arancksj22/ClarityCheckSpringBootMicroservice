@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: Backend
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://<your-idp-domain>/  # set real issuer and set app.security.enabled=true to enforce auth
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
+
+# To enable Supabase Postgres, remove the 'spring.autoconfigure.exclude' above and fill these:
+# spring:
+#   datasource:
+#     url: jdbc:postgresql://<supabase-host>:5432/postgres?sslmode=require
+#     username: <supabase-user>
+#     password: <supabase-password>
+#   jpa:
+#     hibernate:
+#       ddl-auto: update
+#     properties:
+#       hibernate:
+#         format_sql: true
+
+app:
+  security:
+    enabled: false  # set to true after OAuth provider is configured
+    allowed-origins:
+      - http://localhost:4200
+  s3:
+    bucket: <your-bucket-name>
+    # region: us-east-1  # uncomment and set to enable S3 beans
+
+# Note: For PDF uploads, ensure the file size does not exceed the configured limits.
+# Also, the X-Debug-User header can be used for debugging purposes.
