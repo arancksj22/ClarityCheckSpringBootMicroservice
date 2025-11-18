@@ -15,11 +15,11 @@ public class OAuthConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
 
         http
+                .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/api/chat")
+                )
                 .authorizeHttpRequests(auth -> auth
-                        // Simply use a string pattern - Spring Security handles it internally
                         .requestMatchers("/api/chat").permitAll()
-
-                        // Require authentication for all other routes
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(Customizer.withDefaults())
