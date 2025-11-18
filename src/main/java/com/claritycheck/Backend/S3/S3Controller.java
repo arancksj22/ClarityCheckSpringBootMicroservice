@@ -5,6 +5,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,8 +23,14 @@ public class S3Controller {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<String> upload(@RequestParam("file")MultipartFile file) throws IOException {
-        return ResponseEntity.ok(service.upload(file));
+    public ResponseEntity<String> upload(
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal OAuth2User principal) throws IOException {
+
+        // Get the unique identifier (email) from Google/OAuth2
+        String userEmail = principal.getAttribute("email");
+
+        return ResponseEntity.ok(service.upload(file, userEmail));
     }
 
     @GetMapping("/download/{fileName}")
