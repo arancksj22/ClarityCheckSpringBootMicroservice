@@ -69,9 +69,7 @@ public class S3Service {
             extractedText = stripper.getText(document);
         }
 
-        // 4. CALL PYTHON MICROSERVICE
-        // TODO: Update this URL to your Render Python URL when deploying!
-        String pythonServiceUrl = "http://localhost:8000/analyze";
+        String pythonServiceUrl = "https://claritycheckfastapimicroservice.onrender.com/analyze";
 
         // Prepare Payload
         Map<String, String> payload = Collections.singletonMap("text", extractedText);
