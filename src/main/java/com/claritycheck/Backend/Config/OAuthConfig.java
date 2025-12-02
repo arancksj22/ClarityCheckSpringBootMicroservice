@@ -44,7 +44,7 @@ public class OAuthConfig {
         // IMPORTANT: No trailing slash (/) at the end
         configuration.setAllowedOrigins(List.of(
                 "https://claritycheck-flame.vercel.app",
-                "http://localhost:3000" // Keep this for local testing
+                "http://localhost:4200" // Keep this for local testing
         ));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
