@@ -2,8 +2,12 @@ package com.claritycheck.Backend.S3;
 
 import io.awspring.cloud.s3.S3Resource;
 import io.awspring.cloud.s3.S3Template;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
@@ -12,7 +16,9 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,6 +26,7 @@ public class S3Service {
 
     private final S3Template s3Template;
     private final S3Client s3Client;
+    private final RestTemplate restTemplate;
 
     @Value("${spring.cloud.aws.s3.bucket}")
     private String bucketName;
@@ -27,33 +34,40 @@ public class S3Service {
     public S3Service(S3Template s3Template, S3Client s3Client) {
         this.s3Template = s3Template;
         this.s3Client = s3Client;
+        this.restTemplate = new RestTemplate();
     }
 
     /**
      * Uploads a file with Quota Check (Max 3 files per user)
      */
-    public String upload(MultipartFile file, String userEmail) throws IOException {
+    public Object upload(MultipartFile file, String userEmail) throws IOException {
         String userPrefix = userEmail + "/";
 
-        // 1. CHECK QUOTA
+        // 1. Check Limit
         ListObjectsV2Request listRequest = ListObjectsV2Request.builder()
-                .bucket(bucketName)
-                .prefix(userPrefix)
-                .maxKeys(4)
-                .build();
-
-        ListObjectsV2Response result = s3Client.listObjectsV2(listRequest);
-        int currentCount = result.keyCount();
-
-        if (currentCount >= 3) {
+                .bucket(bucketName).prefix(userPrefix).maxKeys(4).build();
+        if (s3Client.listObjectsV2(listRequest).keyCount() >= 3) {
             throw new RuntimeException("Upload limit reached! User " + userEmail + " already has 3 files.");
         }
 
-        // 2. UPLOAD
+        // 2. Upload to S3
         String key = userPrefix + file.getOriginalFilename();
         s3Template.upload(bucketName, key, file.getInputStream());
 
-        return "Uploaded " + key;
+        // 3. Extract Text (PDFBox 2.0 Style)
+        String extractedText = "";
+        try (PDDocument document = PDDocument.load(file.getInputStream())) {
+            PDFTextStripper stripper = new PDFTextStripper();
+            extractedText = stripper.getText(document);
+        }
+
+        // 4. Call Python
+        String pythonServiceUrl = "http://localhost:8000/analyze";
+
+        Map<String, String> payload = Collections.singletonMap("text", extractedText);
+
+        // Standard Post Request
+        return restTemplate.postForObject(pythonServiceUrl, payload, Object.class);
     }
 
     /**

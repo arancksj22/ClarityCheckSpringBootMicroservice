@@ -34,15 +34,17 @@ public class S3Controller {
 
     // 2. UPLOAD (FIXED: Returns JSON Map)
     @PostMapping("/upload")
-    public ResponseEntity<Map<String, String>> upload(
+    public ResponseEntity<Object> upload(
             @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal OAuth2User principal) throws IOException {
 
         String userEmail = principal.getAttribute("email");
-        String resultMsg = service.upload(file, userEmail);
 
-        // WRAP IN JSON: { "message": "Uploaded..." }
-        return ResponseEntity.ok(Collections.singletonMap("message", resultMsg));
+        // Call service (which now returns the Analysis Object, not a String)
+        Object analysisResult = service.upload(file, userEmail);
+
+        // Return the analysis directly to the frontend
+        return ResponseEntity.ok(analysisResult);
     }
 
     // 3. DOWNLOAD (No changes needed, returns binary stream)
