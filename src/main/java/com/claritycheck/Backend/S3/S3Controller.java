@@ -1,5 +1,7 @@
 package com.claritycheck.Backend.S3;
 
+import com.claritycheck.Backend.model.BiasReport;
+import com.claritycheck.Backend.service.AggregatorService;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -20,9 +22,11 @@ import java.util.List;
 public class S3Controller {
 
     private final S3Service service;
+    private final AggregatorService aggregatorService;
 
-    public S3Controller(S3Service service) {
+    public S3Controller(S3Service service, AggregatorService aggregatorService) {
         this.service = service;
+        this.aggregatorService = aggregatorService;
     }
 
     // 1. LIST FILES (Returns a List, which is valid JSON array)
@@ -34,17 +38,20 @@ public class S3Controller {
 
     // 2. UPLOAD (FIXED: Returns JSON Map)
     @PostMapping("/upload")
-    public ResponseEntity<Object> upload(
-            @RequestParam("file") MultipartFile file,
-            @AuthenticationPrincipal OAuth2User principal) throws IOException {
+    public ResponseEntity<BiasReport> upload( // Return the Standard BiasReport
+                                              @RequestParam("file") MultipartFile file,
+                                              @AuthenticationPrincipal OAuth2User principal) throws IOException {
 
         String userEmail = principal.getAttribute("email");
 
-        // Call service (which now returns the Analysis Object, not a String)
-        Object analysisResult = service.upload(file, userEmail);
+        // 1. Get the "Smart Summary" from S3Service + Python
+        String filteredText = service.upload(file, userEmail);
 
-        // Return the analysis directly to the frontend
-        return ResponseEntity.ok(analysisResult);
+        // 2. Feed it into your existing Chat Logic
+        // This makes the response identical to the /api/chat endpoint!
+        BiasReport report = aggregatorService.analyzeAll(filteredText);
+
+        return ResponseEntity.ok(report);
     }
 
     // 3. DOWNLOAD (No changes needed, returns binary stream)

@@ -40,34 +40,56 @@ public class S3Service {
     /**
      * Uploads a file with Quota Check (Max 3 files per user)
      */
-    public Object upload(MultipartFile file, String userEmail) throws IOException {
+    public String upload(MultipartFile file, String userEmail) throws IOException {
         String userPrefix = userEmail + "/";
 
-        // 1. Check Limit
+        // 1. CHECK QUOTA
         ListObjectsV2Request listRequest = ListObjectsV2Request.builder()
-                .bucket(bucketName).prefix(userPrefix).maxKeys(4).build();
-        if (s3Client.listObjectsV2(listRequest).keyCount() >= 3) {
+                .bucket(bucketName)
+                .prefix(userPrefix)
+                .maxKeys(4)
+                .build();
+
+        ListObjectsV2Response result = s3Client.listObjectsV2(listRequest);
+        int currentCount = result.keyCount();
+
+        // NOTE: Temporarily set to 10 for testing, change back to 3 for prod
+        if (currentCount >= 10) {
             throw new RuntimeException("Upload limit reached! User " + userEmail + " already has 3 files.");
         }
 
-        // 2. Upload to S3
+        // 2. UPLOAD TO S3
         String key = userPrefix + file.getOriginalFilename();
         s3Template.upload(bucketName, key, file.getInputStream());
 
-        // 3. Extract Text (PDFBox 2.0 Style)
+        // 3. EXTRACT TEXT (PDFBox 2.0 Style)
         String extractedText = "";
         try (PDDocument document = PDDocument.load(file.getInputStream())) {
             PDFTextStripper stripper = new PDFTextStripper();
             extractedText = stripper.getText(document);
         }
 
-        // 4. Call Python
+        // 4. CALL PYTHON MICROSERVICE
+        // TODO: Update this URL to your Render Python URL when deploying!
         String pythonServiceUrl = "http://localhost:8000/analyze";
 
+        // Prepare Payload
         Map<String, String> payload = Collections.singletonMap("text", extractedText);
 
-        // Standard Post Request
-        return restTemplate.postForObject(pythonServiceUrl, payload, Object.class);
+        // Send Request & Extract "filtered_text" from response
+        try {
+            Map response = restTemplate.postForObject(pythonServiceUrl, payload, Map.class);
+            if (response != null && response.containsKey("filtered_text")) {
+                return (String) response.get("filtered_text");
+            }
+        } catch (Exception e) {
+            // Fallback: If Python fails, just return the first 5000 chars of raw text
+            // so the app doesn't crash.
+            System.err.println("Python Microservice failed: " + e.getMessage());
+            return extractedText.substring(0, Math.min(extractedText.length(), 5000));
+        }
+
+        return ""; // Should not happen
     }
 
     /**
