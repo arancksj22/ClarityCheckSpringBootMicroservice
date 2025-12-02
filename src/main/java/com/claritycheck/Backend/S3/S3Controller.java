@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Collections; // <--- Import this
+import java.util.Map;         // <--- Import this
+import java.util.List;
 
 @RestController
 @RequestMapping("/s3")
@@ -22,27 +25,50 @@ public class S3Controller {
         this.service = service;
     }
 
+    // 1. LIST FILES (Returns a List, which is valid JSON array)
+    @GetMapping("/files")
+    public ResponseEntity<List<String>> listFiles(@AuthenticationPrincipal OAuth2User principal) {
+        String userEmail = principal.getAttribute("email");
+        return ResponseEntity.ok(service.listFiles(userEmail));
+    }
+
+    // 2. UPLOAD (FIXED: Returns JSON Map)
     @PostMapping("/upload")
-    public ResponseEntity<String> upload(
+    public ResponseEntity<Map<String, String>> upload(
             @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal OAuth2User principal) throws IOException {
 
-        // Get the unique identifier (email) from Google/OAuth2
         String userEmail = principal.getAttribute("email");
+        String resultMsg = service.upload(file, userEmail);
 
-        return ResponseEntity.ok(service.upload(file, userEmail));
+        // WRAP IN JSON: { "message": "Uploaded..." }
+        return ResponseEntity.ok(Collections.singletonMap("message", resultMsg));
     }
 
+    // 3. DOWNLOAD (No changes needed, returns binary stream)
     @GetMapping("/download/{fileName}")
-    public ResponseEntity<Resource> download(@PathVariable String fileName) throws IOException {
+    public ResponseEntity<Resource> download(
+            @PathVariable String fileName,
+            @AuthenticationPrincipal OAuth2User principal) throws IOException {
+
+        String userEmail = principal.getAttribute("email");
+
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
-                .body(new InputStreamResource(service.download(fileName)));
+                .body(new InputStreamResource(service.download(fileName, userEmail)));
     }
 
+    // 4. DELETE (FIXED: Returns JSON Map)
     @DeleteMapping("/delete/{fileName}")
-    public ResponseEntity<String> delete(@PathVariable String fileName) {
-        return ResponseEntity.ok(service.delete(fileName));
+    public ResponseEntity<Map<String, String>> delete(
+            @PathVariable String fileName,
+            @AuthenticationPrincipal OAuth2User principal) {
+
+        String userEmail = principal.getAttribute("email");
+        String resultMsg = service.delete(fileName, userEmail);
+
+        // WRAP IN JSON: { "message": "Deleted..." }
+        return ResponseEntity.ok(Collections.singletonMap("message", resultMsg));
     }
 }
