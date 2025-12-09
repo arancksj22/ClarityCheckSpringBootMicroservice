@@ -15,7 +15,7 @@ public class ChatService {
     public String sendToGemini(String prompt) {
         RestTemplate restTemplate = new RestTemplate();
         String GEMINI_URL =
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
         Map<String, Object> payload = Map.of(
                 "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt))))
         );
