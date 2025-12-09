@@ -29,7 +29,7 @@ public class OAuthConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        .defaultSuccessUrl("https://claritycheck-flame.vercel.app/", true)
+                        .defaultSuccessUrl("https://claritycheck-flame.vercel.app", true)
                 )
                 .formLogin(Customizer.withDefaults());
 
